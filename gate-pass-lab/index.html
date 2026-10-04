@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Gate-Pass Stress Lab — offline-first QR entry you can break on purpose</title>
+    <meta name="description" content="Signed QR passes verified in the browser with Web Crypto, IndexedDB offline queue, double-entry detection and a built-in load generator. By Viral Gautami." />
+    <meta name="theme-color" content="#f5f5f7" />
+    <link rel="icon" href="/gate-pass-lab/favicon.svg" type="image/svg+xml" />
+    <link rel="manifest" href="/gate-pass-lab/manifest.webmanifest" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+    <script>
+      try {
+        var t = localStorage.getItem('vg-theme');
+        if (!t) t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+        document.documentElement.dataset.theme = t;
+      } catch (e) { document.documentElement.dataset.theme = 'dark'; }
+    </script>
+    <script type="module" crossorigin src="/gate-pass-lab/assets/index-Yx-V0tbl.js"></script>
+    <link rel="stylesheet" crossorigin href="/gate-pass-lab/assets/index-CAn8bCtx.css">
+  </head>
+  <body>
+    <header class="bar">
+      <a class="mark" href="https://viralgautami.github.io/" aria-label="Back to Viral Gautami's portfolio">
+        <svg viewBox="0 0 64 64" width="24" height="24" aria-hidden="true"><path d="M4 36h14l7-20 11 32 8-22 4 10h12" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>VG</span><small>/ gate-pass-lab</small>
+      </a>
+      <div class="bar-r">
+        <a class="link" href="https://viralgautami.github.io/" rel="noreferrer">Portfolio ↗</a>
+        <button id="theme" class="icon-btn" aria-label="Toggle theme" title="Toggle theme">◐</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="intro">
+        <p class="eyebrow"><span class="dot"></span> runs in your browser · no server · simulated venue</p>
+        <h1>Gate-Pass <em>Stress</em> Lab</h1>
+        <p class="lede">
+          Entry gates fail in two ways: the network drops, and people try to get in twice.
+          This lab issues <b>cryptographically signed QR passes</b>, validates them <b>offline</b>,
+          queues admissions in <b>IndexedDB</b>, and then lets you break it — cut the network, replay a pass at two gates,
+          or flood the line with thousands of scans.
+        </p>
+        <button id="demo" class="btn primary" disabled>▶ Run the 10-second double-entry demo</button>
+      </section>
+
+      <section class="grid">
+        <div class="card" id="issue">
+          <h2><span>01</span> Issue passes</h2>
+          <p class="muted">An ECDSA P-256 key signs each pass. Gates hold only the <em>public</em> key — a stolen scanner can verify passes but can never mint one.</p>
+          <div class="row">
+            <label class="num"><span>How many</span><input id="count" type="number" min="10" max="20000" value="3000" /></label>
+            <button id="issueBtn" class="btn primary">Issue passes</button>
+          </div>
+          <p id="issueStatus" class="status" role="status">No passes yet.</p>
+          <div class="passbox" id="passbox" hidden>
+            <div id="qr" class="qr" role="img" aria-label="QR code of the sample pass"></div>
+            <div class="tok">
+              <b id="sampleTitle">Pass #1</b>
+              <code id="sampleTok"></code>
+              <small class="muted">GP1 · base64url(payload) · base64url(ECDSA signature)</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" id="gates">
+          <h2><span>02</span> Two gates</h2>
+          <p class="muted">Each gate decides locally. Online, the server confirms. Offline, the gate admits and queues — and two offline gates can both admit the same pass.</p>
+          <div class="gates2">
+            <article class="gate" data-gate="A">
+              <header><b>Gate A</b>
+                <button class="toggle" data-toggle="A" aria-pressed="true"><i></i><span>Online</span></button>
+              </header>
+              <dl><div><dt>admitted</dt><dd id="adm-A">0</dd></div><div><dt>queued</dt><dd id="pen-A">0</dd></div></dl>
+              <div class="acts">
+                <button class="pill" data-act="fresh" data-g="A">Scan next pass</button>
+                <button class="pill" data-act="same" data-g="A">Scan last pass</button>
+                <button class="pill" data-act="forged" data-g="A">Scan forged</button>
+              </div>
+              <div class="result" id="res-A" aria-live="polite">—</div>
+            </article>
+            <article class="gate" data-gate="B">
+              <header><b>Gate B</b>
+                <button class="toggle" data-toggle="B" aria-pressed="true"><i></i><span>Online</span></button>
+              </header>
+              <dl><div><dt>admitted</dt><dd id="adm-B">0</dd></div><div><dt>queued</dt><dd id="pen-B">0</dd></div></dl>
+              <div class="acts">
+                <button class="pill" data-act="fresh" data-g="B">Scan next pass</button>
+                <button class="pill" data-act="same" data-g="B">Scan last pass</button>
+                <button class="pill" data-act="forged" data-g="B">Scan forged</button>
+              </div>
+              <div class="result" id="res-B" aria-live="polite">—</div>
+            </article>
+          </div>
+          <label class="slide"><span>Simulated server round trip: <b id="rttv">70</b> ms</span>
+            <input id="rtt" type="range" min="0" max="400" step="10" value="70" />
+          </label>
+        </div>
+
+        <div class="card wide" id="ledger">
+          <h2><span>03</span> Server ledger &amp; conflicts</h2>
+          <p class="muted">What the server knows. When an offline gate reconnects, its queue is replayed and double entries are caught — late, but caught.</p>
+          <div class="kpis">
+            <div><b id="k-led">0</b><span>passes admitted</span></div>
+            <div><b id="k-con">0</b><span>double entries caught at sync</span></div>
+          </div>
+          <ul id="log" class="log" aria-live="polite"><li class="muted">Events will appear here.</li></ul>
+        </div>
+
+        <div class="card wide" id="stress">
+          <h2><span>04</span> Stress the gate</h2>
+          <p class="muted">A third, offline-first gate processes scans back-to-back. Each scan = signature verification + duplicate check + durable IndexedDB write. Latencies are measured with <code>performance.now()</code> on <em>your</em> device.</p>
+          <div class="row wrap">
+            <label class="num"><span>Scans</span><input id="sN" type="number" min="100" max="20000" value="5000" /></label>
+            <label class="num"><span>% duplicates</span><input id="sDup" type="number" min="0" max="90" value="15" /></label>
+            <label class="num"><span>% forged</span><input id="sBad" type="number" min="0" max="90" value="5" /></label>
+            <button id="stressBtn" class="btn primary" disabled>Run stress test</button>
+          </div>
+          <p id="stressStatus" class="status" role="status">Issue passes first.</p>
+          <div class="stats" id="stats" hidden>
+            <div><b id="s-p50">–</b><span>p50 ms</span></div>
+            <div><b id="s-p95">–</b><span>p95 ms</span></div>
+            <div><b id="s-p99">–</b><span>p99 ms</span></div>
+            <div><b id="s-tps">–</b><span>scans / sec</span></div>
+            <div><b id="s-ok">–</b><span>admitted</span></div>
+            <div><b id="s-dup">–</b><span>duplicates stopped</span></div>
+            <div><b id="s-bad">–</b><span>forgeries stopped</span></div>
+            <div class="vs"><b id="s-vs">–</b><span>vs. server round-trip decision</span></div>
+          </div>
+          <canvas id="chart" role="img" aria-label="Per-scan latency over the run" hidden></canvas>
+        </div>
+      </section>
+
+      <footer class="foot">
+        <p>No real venue, server or attendee data is involved: the server is simulated in memory and passes are generated in your tab.
+        Reset clears everything stored on this device. Built by <a href="https://viralgautami.github.io/">Viral Gautami</a>.</p>
+        <button id="reset" class="pill">Reset lab &amp; clear local data</button>
+      </footer>
+    </main>
+  </body>
+</html>

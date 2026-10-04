@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>FHIR Analytics Lab — SQL over clinical data, in your browser</title>
+    <meta name="description" content="Run real SQL over a synthetic FHIR patient cohort with DuckDB-WASM. No server, no sign-up, no real patient data. By Viral Gautami." />
+    <meta name="theme-color" content="#f5f5f7" />
+    <link rel="icon" href="/fhir-analytics-lab/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+    <script>
+      try {
+        var t = localStorage.getItem('vg-theme');
+        if (!t) t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+        document.documentElement.dataset.theme = t;
+      } catch (e) { document.documentElement.dataset.theme = 'dark'; }
+    </script>
+    <script type="module" crossorigin src="/fhir-analytics-lab/assets/index-DFSyRqsh.js"></script>
+    <link rel="stylesheet" crossorigin href="/fhir-analytics-lab/assets/index-DzZ2rs0c.css">
+  </head>
+  <body>
+    <header class="bar">
+      <a class="mark" href="https://viralgautami.github.io/" aria-label="Back to Viral Gautami's portfolio">
+        <svg viewBox="0 0 64 64" width="24" height="24" aria-hidden="true"><path d="M4 36h14l7-20 11 32 8-22 4 10h12" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>VG</span><small>/ fhir-analytics-lab</small>
+      </a>
+      <div class="bar-r">
+        <a class="link" href="https://viralgautami.github.io/" rel="noreferrer">Portfolio ↗</a>
+        <button id="theme" class="icon-btn" aria-label="Toggle theme" title="Toggle theme">◐</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="intro">
+        <p class="eyebrow"><span class="dot"></span> 100% client-side · synthetic data · nothing leaves this tab</p>
+        <h1>FHIR <em>Analytics</em> Lab</h1>
+        <p class="lede">
+          An interactive playground for clinical data analytics:
+          raw <b>FHIR NDJSON</b> is flattened into tables and queried with real <b>SQL</b> by
+          <b>DuckDB compiled to WebAssembly</b>. Pick a clinical question below, or write your own.
+        </p>
+      </section>
+
+      <section class="lab">
+        <aside class="side">
+          <div class="card">
+            <h2>Pipeline</h2>
+            <ol id="stages" class="stages">
+              <li data-s="0"><i></i><div><b>Load engine</b><small>DuckDB-WASM</small></div><em></em></li>
+              <li data-s="1"><i></i><div><b>Fetch NDJSON</b><small>Bulk FHIR export</small></div><em></em></li>
+              <li data-s="2"><i></i><div><b>Flatten to tables</b><small>FHIR → flat tables</small></div><em></em></li>
+              <li data-s="3"><i></i><div><b>Query</b><small>SQL, in-browser</small></div><em></em></li>
+            </ol>
+          </div>
+          <div class="card">
+            <h2>Schema</h2>
+            <div id="schema" class="schema"><p class="muted">Loading…</p></div>
+          </div>
+          <div class="card">
+            <h2>Raw FHIR</h2>
+            <label class="sel"><span>Resource</span>
+              <select id="rawsel"></select>
+            </label>
+            <pre id="raw" class="raw" tabindex="0">—</pre>
+          </div>
+        </aside>
+
+        <div class="main">
+          <div class="card editor">
+            <div id="presets" class="presets" role="tablist" aria-label="Example questions"></div>
+            <p id="blurb" class="blurb"></p>
+            <textarea id="sql" spellcheck="false" aria-label="SQL query" rows="10"></textarea>
+            <div class="editor-foot">
+              <button id="run" class="btn primary" disabled>Run query <kbd>Ctrl ⏎</kbd></button>
+              <span id="status" class="status" role="status">Starting engine…</span>
+            </div>
+          </div>
+
+          <div class="card results" id="results" hidden>
+            <div class="res-head">
+              <h2>Result</h2>
+              <span id="meta" class="meta"></span>
+              <button id="csv" class="pill">Download CSV ↓</button>
+            </div>
+            <div id="chartwrap" class="chartwrap" hidden>
+              <canvas id="chart" role="img" aria-label="Chart of the query result"></canvas>
+              <ul id="legend" class="legend"></ul>
+            </div>
+            <div class="tablewrap"><table id="table"></table></div>
+          </div>
+          <div id="error" class="card error" hidden role="alert"></div>
+        </div>
+      </section>
+
+      <footer class="foot">
+        <p>
+          Data is generated by <code>scripts/generate.mjs</code> (seeded, reproducible) — 1,000 synthetic patients,
+          no real health information. Built by <a href="https://viralgautami.github.io/">Viral Gautami</a>.
+        </p>
+      </footer>
+    </main>
+  </body>
+</html>
