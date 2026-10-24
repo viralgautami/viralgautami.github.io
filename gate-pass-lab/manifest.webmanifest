@@ -1,9 +1,0 @@
-{
-  "name": "Gate-Pass Stress Lab",
-  "short_name": "Gate Lab",
-  "start_url": ".",
-  "display": "standalone",
-  "background_color": "#0b0d0c",
-  "theme_color": "#0b0d0c",
-  "icons": [{ "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
-}
